@@ -21,8 +21,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const base_url = process.env.BASE_URL || "http://localhost:3000/";
-    const formattedBaseUrl = base_url.endsWith('/') ? base_url : `${base_url}/`;
+    // Dynamic host resolution for Vercel/Deployment or fallback to BASE_URL env variable
+    let origin = process.env.BASE_URL;
+    if (!origin) {
+      const host = req.headers.get("host") || "localhost:3000";
+      const protocol = host.includes("localhost") ? "http" : "https";
+      origin = `${protocol}://${host}`;
+    }
+    const formattedBaseUrl = origin.endsWith('/') ? origin : `${origin}/`;
+
     return NextResponse.json(
       { shortUrl: `${formattedBaseUrl}${slug}` },
       { status: 201 }
