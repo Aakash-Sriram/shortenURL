@@ -1,11 +1,30 @@
 import supabase from "@/db/supabaseclient";
+import { getCache } from "@vercel/functions";
 
 export const getURL = async (slug: string) => {
-  const { data, error } = await supabase.from("urls").select("url").eq("slug", slug).single();
-  if (error) {
+  const cache = getCache();
+  const key = `url:${slug}`;
+
+  let cachedUrl = (await cache.get(key)) as string | null;
+  if (cachedUrl) {
+    return { url: cachedUrl };
+  }
+
+  const { data, error } = await supabase
+    .from("urls")
+    .select("url")
+    .eq("slug", slug)
+    .single();
+
+  if (error || !data) {
     console.error("Error getting URL: ", error);
     return null;
   }
+
+  await cache.set(key, data.url, {
+    ttl: 60 * 60, // 1 hour TTL
+  });
+
   return data;
 };
 
@@ -20,3 +39,4 @@ export const putURL = async (slug: string, url: string): Promise<boolean> => {
   }
   return true;
 };
+
